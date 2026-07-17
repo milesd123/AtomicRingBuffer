@@ -1,11 +1,13 @@
 #pragma once
 #include "headers.hpp"
 
+// Wrapper class for asio::ip::tcp::socket
+// Supports connecting and being connected to
 class AsioSocket : public SimpleSocket{
 public:
     AsioSocket(asio::io_context&, asio::error_code, asio::ip::tcp::endpoint);
-    virtual void write(void*, size_t) override;
-    virtual void read(void*, size_t) override;
+    virtual size_t write(void*, size_t) override;
+    virtual size_t read(void*, size_t) override;
     virtual size_t available() override;
     void await_connection();
     void connect();

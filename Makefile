@@ -1,8 +1,6 @@
 # compiler
 CC=clang++ -Werror -O3 -std=c++14 -Isrc/external/asio-1.36.0/include/
 
-all: src/build/program
-
 # src/build/program: src/code/sources/main.cpp src/code/sources/ProxyUtils.cpp src/code/sources/AtomicSPSCQueue.cpp src/code/sources/AsioSocket.cpp src/code/sources/SimpleSocket.cpp
 # 	$(CC) $^ -o $@
 

@@ -7,15 +7,15 @@ AsioSocket::AsioSocket
 :   acceptor(ctx), endpoint(ep), socket(ctx), ec(ec) {}
 
 // write to the socket from a buffer
-void AsioSocket::write(void* buffer, size_t amount)
+size_t AsioSocket::write(void* buffer, size_t amount)
 {
-    asio::write(socket, asio::mutable_buffer(buffer, amount));
+    return asio::write(socket, asio::mutable_buffer(buffer, amount));
 }
 
 // read from the socket into a buffer
-void AsioSocket::read(void* buffer, size_t amount)
+size_t AsioSocket::read(void* buffer, size_t amount)
 {
-    asio::read(socket, asio::mutable_buffer(buffer, amount));
+    return asio::read(socket, asio::mutable_buffer(buffer, amount));
 }
 
 // return the available bytes in the socket
