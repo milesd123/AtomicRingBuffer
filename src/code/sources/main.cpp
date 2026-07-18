@@ -70,17 +70,28 @@ void MinrcraftProxy(const char* hostname, const char* port)
         return;
     }
 
+    // Acceptor for localhost
+    asio::ip::tcp::acceptor acceptor(io_context_);
+
+    acceptor.open(localhost.protocol()); // create OS socket descriptor
+    acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
+    acceptor.set_option(asio::ip::tcp::no_delay(true));
+
+    acceptor.bind(localhost);
+    acceptor.listen();
+
+
     int i = 0;
     while(true){
         std::cout << "iteration " << i++ << std::endl;
-        AsioSocket ClientSocket(io_context_, localhost);
-        AsioSocket ServerSocket(io_context_, endpoints[0]);
+        AsioSocket ClientSocket(io_context_);
+        AsioSocket ServerSocket(io_context_);
         
         AtomicSPSCQueue<uint8_t> ClientToServerQueue(&ClientSocket, &ServerSocket, BUFFERSIZE, server_buffer, "C->S");
         AtomicSPSCQueue<uint8_t> ServerToClientQueue(&ServerSocket, &ClientSocket, BUFFERSIZE, client_buffer, "S->C");
         
-        ClientSocket.await_connection();
-        ServerSocket.connect();
+        ClientSocket.await_connection(acceptor);
+        ServerSocket.connect(endpoints[0]);
         
         ClientToServerQueue.Start();
         ServerToClientQueue.Start();

@@ -2,9 +2,9 @@
 
 AsioSocket::AsioSocket
 (
-    asio::io_context& ctx, asio::ip::tcp::endpoint ep
+    asio::io_context& ctx
 )
-:   acceptor(ctx), endpoint(ep), socket(ctx) {}
+: socket(ctx) {}
 
 // write to the socket from a buffer
 size_t AsioSocket::write(void* buffer, size_t amount)
@@ -45,23 +45,16 @@ size_t AsioSocket::available()
 }
 
 // bind to the endpoint, open on ipv4, listen and accept
-void AsioSocket::await_connection()
+void AsioSocket::await_connection(asio::ip::tcp::acceptor& acceptor)
 {
+    std::cout << " Awaiting connection..." << std::endl;
+    acceptor.accept(socket, receiving_endpoint);
 
-    acceptor.open(endpoint.protocol()); // create OS socket descriptor
-    acceptor.set_option(asio::ip::tcp::acceptor::reuse_address(true));
-
-    acceptor.bind(endpoint);
-    acceptor.listen();
-
-    std::cout << "["<< endpoint.address().to_string() <<":"<< endpoint.port()<< "] Awaiting connection..." << std::endl;
-    acceptor.accept(socket, recieving_endpoint);
-
-    std::cout << "Accepted Connection from: " << recieving_endpoint.address() << std::endl;
+    std::cout << "Accepted Connection from: " << receiving_endpoint.address() << std::endl;
 }
 
 // connect to the endpoint
-void AsioSocket::connect()
+void AsioSocket::connect(asio::ip::tcp::endpoint& endpoint)
 {
     socket.connect(endpoint, ec_w);
 
