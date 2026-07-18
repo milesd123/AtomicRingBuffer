@@ -3,7 +3,6 @@
 #define BUFFERSIZE 1024
 
 
-
 void MinrcraftProxy(const char*, const char*);
 void SocketTest();
 
@@ -66,7 +65,7 @@ void SocketTest()
 
     // create our worker
     AtomicSPSCQueue<uint8_t> queue(&sock, &sock, BUFFERSIZE, queue_buffer);
-
+    
     sock.SetStoppingFunction([&](){queue.Stop();});
 
 

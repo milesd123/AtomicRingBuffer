@@ -31,7 +31,6 @@ public:
 
     void Stop()
     {
-        // Does nothing for now
         running.store(false);
     }
 
@@ -40,23 +39,29 @@ private:
     {
         // assuming that nothing is added inbetween these variables(and 64-byte cache lines) 
         // they should be on the same cache page;
-        alignas(64) size_t start_inclusive_r = 0;
-        size_t end_exclusive_r = 0;
-        size_t amount_r = 0;
+        alignas(64) size_t writer_ = 0;
+        size_t reader_ = 0;
+        size_t space_until_end = 0;
+        size_t read_index = 0;
+        size_t read_amount = 0;
 
-        while (running.load()) 
+        while (running.load(std::memory_order_relaxed))
         {
-            // get our indexes
-            start_inclusive_r = FastModulo(reader.load(std::memory_order_relaxed));
-            end_exclusive_r = FastModulo(writer.load(std::memory_order_acquire));
+            reader_ = reader.load(std::memory_order_relaxed);
+            writer_ = writer.load(std::memory_order_acquire);
+            read_index = FastModulo(reader_);
 
-            // determine where to stop reading
-            if(start_inclusive_r > end_exclusive_r) end_exclusive_r = buffer_size;
-            amount_r = end_exclusive_r - start_inclusive_r;
+            read_amount = writer_ - reader_;
 
-            // atomically increment read_in_index AND write to the buffer
+            space_until_end = buffer_size - read_index;
+
+            if(read_amount >= space_until_end) read_amount = space_until_end;
+
+            if(read_amount == 0) continue;
+
+            // Increment by the amount read returned by the reader (may differ from the amount_w)
             reader.store(
-                start_inclusive_r + socket_to->write(buffer + start_inclusive_r, amount_r), 
+                reader_ + socket_to->write(buffer + read_index, read_amount),
                 std::memory_order_release
             );
         }
@@ -65,29 +70,30 @@ private:
     // Write to the buffer from the socket
     void WriteToBuffer() noexcept
     {
-        alignas(64) size_t start_inclusive_w = 0;
-        size_t end_exclusive_w = 0;
-        size_t available_bytes_w = 0;
-        size_t amount_w = 0;
 
-        while (running.load())
+        alignas(64) size_t writer_ = 0;
+        size_t reader_ = 0;
+        size_t space_until_end = 0;
+        size_t writer_index = 0;
+        size_t write_amount = 0;
+
+        while (running.load(std::memory_order_relaxed))
         {
-            start_inclusive_w = FastModulo(writer.load(std::memory_order_relaxed));
-            end_exclusive_w = FastModulo(reader.load(std::memory_order_acquire));
+            writer_ = writer.load(std::memory_order_relaxed);
+            writer_index = FastModulo(writer_);
+            reader_ = reader.load(std::memory_order_acquire);
 
-            if(start_inclusive_w > end_exclusive_w) end_exclusive_w = buffer_size;
+            write_amount = buffer_size - (writer_ - reader_);
 
-            amount_w = end_exclusive_w - start_inclusive_w;
+            space_until_end = buffer_size - writer_index;
 
-            // determine how many bytes we CAN read
-            available_bytes_w = socket_from->available();
+            if(write_amount >= space_until_end) write_amount = space_until_end;
 
-            // compare with amount of our buffer we can currently fill
-            if(amount_w > available_bytes_w) amount_w = available_bytes_w;
+            if(write_amount == 0) continue; // TODO: Possibly remove me
 
             // Increment by the amount read returned by the reader (may differ from the amount_w)
             writer.store(
-                start_inclusive_w + socket_from->read(buffer + start_inclusive_w, amount_w),
+                writer_ + socket_from->read(buffer + writer_index, write_amount),
                 std::memory_order_release
             );
         }
@@ -102,6 +108,6 @@ private:
     std::atomic<bool> running{false};
 
     // Place all of the writer/reader and their variables in the same cache line
-    alignas(64) std::atomic_size_t writer;
-    alignas(64) std::atomic_size_t reader;
+    alignas(64) std::atomic_size_t writer{0};
+    alignas(64) std::atomic_size_t reader{0};
 };

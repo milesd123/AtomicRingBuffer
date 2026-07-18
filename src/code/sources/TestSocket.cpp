@@ -7,9 +7,11 @@ size_t TestSocket::write(void* queue_buffer, size_t buffer_size)
 {
 
     // TODO: copy stuff into our destination buffer from this given one
-    dest_buffer = memcpy(dest_buffer, queue_buffer, buffer_size);
-    write_operations++;
+    memcpy(dest_buffer, queue_buffer, buffer_size);
 
+    dest_buffer = (uint8_t*) dest_buffer + buffer_size;
+
+    write_operations++;
 
     return buffer_size; // in reality this may not be the case, asio may end up writing less
 }
@@ -17,7 +19,17 @@ size_t TestSocket::write(void* queue_buffer, size_t buffer_size)
 size_t TestSocket::read(void* queue_buffer, size_t buffer_size)
 {
     // fill the queue's buffer from our source buffer
-    source_buffer = memcpy(queue_buffer, source_buffer, buffer_size);
+    void* a = (uint8_t*) source_buffer + buffer_size;
+
+    if(a > source_buffer_end)
+    {
+        stopping_function();
+        return 0;
+    }
+
+    memcpy(queue_buffer, source_buffer, buffer_size);
+
+    source_buffer = a;
 
     read_operations++;
     
