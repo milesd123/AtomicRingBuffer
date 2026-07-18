@@ -58,15 +58,15 @@ void MinrcraftProxy(const char* hostname, const char* port)
         return;
     }
 
-    AsioSocket ClientSocket(io_context_, ec, localhost);
-    AsioSocket ServerSocket(io_context_, ec, endpoints[0]);
+    AsioSocket ClientSocket(io_context_, localhost);
+    AsioSocket ServerSocket(io_context_, endpoints[0]);
 
     AtomicSPSCQueue<uint8_t> ClientToServerQueue(&ClientSocket, &ServerSocket, BUFFERSIZE, server_buffer);
     AtomicSPSCQueue<uint8_t> ServerToClientQueue(&ServerSocket, &ClientSocket, BUFFERSIZE, client_buffer);
 
     ClientSocket.await_connection();
     ServerSocket.connect();
-    
+
     ClientToServerQueue.Start();
     ServerToClientQueue.Start();
 

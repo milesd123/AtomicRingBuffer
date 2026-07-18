@@ -13,7 +13,7 @@ public:
     (
         SimpleSocket* to, SimpleSocket* from, size_t buf_size, BufferType* buf
     )
-    :   socket_to(to), socket_from(from), buffer(buf), buffer_size(buf_size) {}
+    :   source_socket(to), dest_socket(from), buffer(buf), buffer_size(buf_size) {}
 
     void Start()
     {
@@ -37,6 +37,7 @@ public:
 private:    
     void ReadFromBuffer()
     {
+        std::cout << "ReadFromBuffer Started" <<std::endl;
         // assuming that nothing is added inbetween these variables(and 64-byte cache lines) 
         // they should be on the same cache page;
         alignas(64) size_t writer_ = 0;
@@ -44,8 +45,7 @@ private:
         size_t space_until_end = 0;
         size_t read_index = 0;
         size_t read_amount = 0;
-
-        socket_from->WaitWrite();
+        size_t avail = 0;
 
         while (running.load(std::memory_order_relaxed))
         {
@@ -61,9 +61,15 @@ private:
 
             if(read_amount == 0) continue;
 
+            size_t done = dest_socket->write(buffer + read_index, read_amount);
+
+            if(done == 0) continue;
+        
+            std::cout << std::this_thread::get_id()<<"\t\tConsumer Size:" << read_amount << ". Written to sock: " << done << std::endl;
+
             // Increment by the amount read returned by the reader (may differ from the amount_w)
             reader.store(
-                reader_ + socket_from->write(buffer + read_index, read_amount),
+                reader_ + done,
                 std::memory_order_release
             );
         }
@@ -72,14 +78,13 @@ private:
     // Write to the buffer from the socket
     void WriteToBuffer()
     {
+        std::cout << "ReadFromBuffer Started" <<std::endl;
 
         alignas(64) size_t writer_ = 0;
         size_t reader_ = 0;
         size_t space_until_end = 0;
         size_t writer_index = 0;
         size_t write_amount = 0;
-
-        socket_to->WaitRead();
 
         while (running.load(std::memory_order_relaxed))
         {
@@ -95,9 +100,15 @@ private:
 
             if(write_amount == 0) continue; // TODO: Possibly remove me
 
+            size_t done = source_socket->read(buffer + writer_index, write_amount);
+
+            if(done == 0) continue;
+
+            std::cout << std::this_thread::get_id()<<" Producer Size:" << write_amount << ". Written to buf: " << done << std::endl;
+
             // Increment by the amount read returned by the reader (may differ from the amount_w)
             writer.store(
-                writer_ + socket_to->read(buffer + writer_index, write_amount),
+                writer_ + done,
                 std::memory_order_release
             );
         }
@@ -105,8 +116,8 @@ private:
 
     const size_t buffer_size;
     BufferType* const buffer; 
-    SimpleSocket* socket_to; // leaving non-const for the future
-    SimpleSocket* socket_from;
+    SimpleSocket* source_socket; // leaving non-const for the future
+    SimpleSocket* dest_socket;
     std::thread worker_to;
     std::thread worker_from;
     std::atomic<bool> running{false};

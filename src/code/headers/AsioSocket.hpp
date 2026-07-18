@@ -5,7 +5,7 @@
 // Supports connecting and being connected to
 class AsioSocket : public SimpleSocket{
 public:
-    AsioSocket(asio::io_context&, asio::error_code, asio::ip::tcp::endpoint);
+    AsioSocket(asio::io_context&, asio::ip::tcp::endpoint);
     virtual size_t write(void*, size_t) override;
     virtual size_t read(void*, size_t) override;
     virtual size_t available() override;
@@ -18,5 +18,6 @@ private:
     asio::ip::tcp::acceptor acceptor;
     asio::ip::tcp::endpoint endpoint;
     asio::ip::tcp::endpoint recieving_endpoint;
-    asio::error_code ec;
+    asio::error_code ec_w;
+    asio::error_code ec_r;
 };

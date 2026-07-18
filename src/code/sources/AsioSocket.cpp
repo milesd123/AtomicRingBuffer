@@ -2,20 +2,26 @@
 
 AsioSocket::AsioSocket
 (
-    asio::io_context& ctx, asio::error_code ec, asio::ip::tcp::endpoint ep
+    asio::io_context& ctx, asio::ip::tcp::endpoint ep
 )
-:   acceptor(ctx), endpoint(ep), socket(ctx), ec(ec) {}
+:   acceptor(ctx), endpoint(ep), socket(ctx) {}
 
 // write to the socket from a buffer
 size_t AsioSocket::write(void* buffer, size_t amount)
 {
-    return asio::write(socket, asio::mutable_buffer(buffer, amount));
+
+    return socket.write_some(asio::mutable_buffer(buffer, amount), ec_w);
+
+    size_t write = socket.write_some(asio::mutable_buffer(buffer, amount), ec_w);
 }
 
 // read from the socket into a buffer
 size_t AsioSocket::read(void* buffer, size_t amount)
 {
-    return asio::read(socket, asio::mutable_buffer(buffer, amount));
+    return socket.read_some(asio::mutable_buffer(buffer, amount), ec_r);
+
+    // return asio::read(socket, asio::mutable_buffer(buffer, amount), ec_r);
+    size_t read = socket.read_some(asio::mutable_buffer(buffer, amount), ec_r);
 }
 
 // return the available bytes in the socket
@@ -41,10 +47,10 @@ void AsioSocket::await_connection()
 // connect to the endpoint
 void AsioSocket::connect()
 {
-    socket.connect(endpoint, ec);
+    socket.connect(endpoint, ec_w);
 
-    if(ec){
-        std::cout << "Error connecting to the endpoint " << endpoint <<": "<<ec.message()<<std::endl;
+    if(ec_w){
+        std::cout << "Error connecting to the endpoint " << endpoint <<": "<<ec_w.message()<<std::endl;
     } else{
         std::cout << "Connected to " << endpoint.address() << std::endl;
     }
