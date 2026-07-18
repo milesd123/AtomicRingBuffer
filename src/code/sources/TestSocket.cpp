@@ -48,6 +48,18 @@ size_t TestSocket::available()
     return current_available;
 }
 
+void TestSocket::WaitRead()
+{
+
+}
+
+
+// block until ready to write
+void TestSocket::WaitWrite()
+{
+
+}
+
 
 
 //

@@ -35,7 +35,7 @@ public:
     }
 
 private:    
-    void ReadFromBuffer() noexcept
+    void ReadFromBuffer()
     {
         // assuming that nothing is added inbetween these variables(and 64-byte cache lines) 
         // they should be on the same cache page;
@@ -44,6 +44,8 @@ private:
         size_t space_until_end = 0;
         size_t read_index = 0;
         size_t read_amount = 0;
+
+        socket_from->WaitWrite();
 
         while (running.load(std::memory_order_relaxed))
         {
@@ -61,14 +63,14 @@ private:
 
             // Increment by the amount read returned by the reader (may differ from the amount_w)
             reader.store(
-                reader_ + socket_to->write(buffer + read_index, read_amount),
+                reader_ + socket_from->write(buffer + read_index, read_amount),
                 std::memory_order_release
             );
         }
     }
 
     // Write to the buffer from the socket
-    void WriteToBuffer() noexcept
+    void WriteToBuffer()
     {
 
         alignas(64) size_t writer_ = 0;
@@ -76,6 +78,8 @@ private:
         size_t space_until_end = 0;
         size_t writer_index = 0;
         size_t write_amount = 0;
+
+        socket_to->WaitRead();
 
         while (running.load(std::memory_order_relaxed))
         {
@@ -93,7 +97,7 @@ private:
 
             // Increment by the amount read returned by the reader (may differ from the amount_w)
             writer.store(
-                writer_ + socket_from->read(buffer + writer_index, write_amount),
+                writer_ + socket_to->read(buffer + writer_index, write_amount),
                 std::memory_order_release
             );
         }

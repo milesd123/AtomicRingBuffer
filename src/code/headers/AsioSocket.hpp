@@ -11,6 +11,8 @@ public:
     virtual size_t available() override;
     void await_connection();
     void connect();
+    virtual void WaitRead() override;
+    virtual void WaitWrite() override;
 private:
     asio::ip::tcp::socket socket;
     asio::ip::tcp::acceptor acceptor;

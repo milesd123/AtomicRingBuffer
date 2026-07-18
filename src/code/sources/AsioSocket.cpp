@@ -27,9 +27,12 @@ size_t AsioSocket::available()
 // bind to the endpoint, open on ipv4, listen and accept
 void AsioSocket::await_connection()
 {
+
+    acceptor.open(endpoint.protocol());
     acceptor.bind(endpoint);
-    acceptor.open(asio::ip::tcp::v4());
     acceptor.listen();
+
+    std::cout << "["<< endpoint.address().to_string() <<":"<< endpoint.port()<< "] Awaiting connection..." << std::endl;
     acceptor.accept(socket, recieving_endpoint);
 
     std::cout << "Accepted Connection from: " << recieving_endpoint.address() << std::endl;
@@ -45,6 +48,21 @@ void AsioSocket::connect()
     } else{
         std::cout << "Connected to " << endpoint.address() << std::endl;
     }
+}
+
+// block until ready to read
+void AsioSocket::WaitRead()
+{
+    socket.wait(asio::ip::tcp::socket::wait_read);
+    // while(!socket.is_open());
+}
+
+
+// block until ready to write
+void AsioSocket::WaitWrite()
+{
+    socket.wait(asio::ip::tcp::socket::wait_write);
+    // while(!socket.is_open());
 }
 
 // private:

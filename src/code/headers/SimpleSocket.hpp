@@ -9,4 +9,6 @@ public:
     virtual size_t write(void*, size_t) = 0;
     virtual size_t read(void*, size_t) = 0;
     virtual size_t available() = 0;
+    virtual void WaitRead() = 0;
+    virtual void WaitWrite() = 0;
 };
