@@ -89,6 +89,8 @@ void AtomicSPSCQueue::ReadFromBuffer()
 
         if(read_amount >= space_until_end) read_amount = space_until_end;
 
+        if(read_amount == 0) continue;
+
         size_t done = dest_socket->write(buffer + read_index, read_amount);
 
         if(done == 0) Stop();
@@ -127,6 +129,8 @@ void AtomicSPSCQueue::WriteToBuffer()
         space_until_end = buffer_size - writer_index;
 
         if(write_amount >= space_until_end) write_amount = space_until_end;
+
+        if(write_amount == 0) continue; // TODO: Possibly remove me
 
         written = source_socket->read(buffer + writer_index, write_amount);
 
