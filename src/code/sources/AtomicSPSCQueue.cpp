@@ -10,7 +10,7 @@ AtomicSPSCQueue::AtomicSPSCQueue
 :   source_socket(to), dest_socket(from), buffer(buf), buffer_size(buf_size), name(name) 
 {
     // assert buffer is a power of 2 for FastModulo() to work correctly
-    assert(buf_size & (buf_size - 1) == 0);
+    assert((buf_size & (buf_size - 1)) == 0);
 }
 
 void AtomicSPSCQueue::Start()
@@ -34,7 +34,7 @@ void AtomicSPSCQueue::Stop()
     if(!running_na) return;
     running_na = false;
     running.store(false);
-    if(worker_from.joinable()) worker_from.join();   // <-- called FROM worker_from itself
+    if(worker_from.joinable()) worker_from.join();   // very bad if called FROM worker_from itself: tries to stop itself, deadlock, system_error
     if(worker_to.joinable()) worker_to.join();
     std::cout << name << " Stopped." << std::endl;
 }
