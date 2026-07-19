@@ -5,8 +5,8 @@ class TestSocket: public SimpleSocket
 {
 public:
     TestSocket();
-    virtual size_t write(void*, size_t) override;
-    virtual size_t read(void*, size_t) override;
+    virtual size_t write(void*, size_t, asio::error_code&) override;
+    virtual size_t read(void*, size_t, asio::error_code&) override;
     virtual size_t available() override;
     virtual void WaitRead() override;
     virtual void WaitWrite() override;
@@ -18,7 +18,6 @@ public:
     const void* GetDestination();
     void SetSource(void*, const void*);
     void SetDestination(void*);
-    void SetStoppingFunction(std::function<void(void)>);
 
 private:
 
@@ -34,5 +33,4 @@ private:
     size_t rng_mult = 23;
     size_t rng_incr = 57;
     size_t mod = 1023; // same as buffer size;
-    std::function<void(void)> stopping_function;
 };

@@ -7,35 +7,16 @@ AsioSocket::AsioSocket
 : socket(ctx) {}
 
 // write to the socket from a buffer
-size_t AsioSocket::write(void* buffer, size_t amount)
+size_t AsioSocket::write(void* buffer, size_t amount, asio::error_code& ec)
 {
-
-    // return socket.write_some(asio::mutable_buffer(buffer, amount), ec_w);
-
-    size_t write = socket.write_some(asio::mutable_buffer(buffer, amount), ec_w);
-    static volatile int flag = 1;
-    if(ec_w && flag)
-    {
-        std::cout << "[W]"<<std::this_thread::get_id();
-        flag = 0;
-    }
-    return write;
+    // TODO: add error code to the function arguments so the main thread only makes 1 check.
+    return socket.write_some(asio::mutable_buffer(buffer, amount), ec);
 }
 
 // read from the socket into a buffer
-size_t AsioSocket::read(void* buffer, size_t amount)
+size_t AsioSocket::read(void* buffer, size_t amount, asio::error_code& ec)
 {
-    // return socket.read_some(asio::mutable_buffer(buffer, amount), ec_r);
-
-    // return asio::read(socket, asio::mutable_buffer(buffer, amount), ec_r);
-    size_t read = socket.read_some(asio::mutable_buffer(buffer, amount), ec_r);
-    static volatile int flag = 1;
-    if(ec_r && flag)
-    {
-        std::cout << "[R]"<<std::this_thread::get_id();
-        flag = 0;
-    }
-    return read;
+    return socket.read_some(asio::mutable_buffer(buffer, amount), ec);
 }
 
 // return the available bytes in the socket
@@ -56,10 +37,11 @@ void AsioSocket::await_connection(asio::ip::tcp::acceptor& acceptor)
 // connect to the endpoint
 void AsioSocket::connect(asio::ip::tcp::endpoint& endpoint)
 {
-    socket.connect(endpoint, ec_w);
+    asio::error_code ec;
+    socket.connect(endpoint, ec);
 
-    if(ec_w){
-        std::cout << "Error connecting to the endpoint " << endpoint <<": "<<ec_w.message()<<std::endl;
+    if(ec){
+        std::cout << "Error connecting to the endpoint " << endpoint <<": "<<ec.message()<<std::endl;
     } else{
         std::cout << "Connected to " << endpoint.address() << std::endl;
     }

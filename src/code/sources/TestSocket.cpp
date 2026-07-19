@@ -3,7 +3,7 @@
 TestSocket::TestSocket() {}
 
 // write to a "socket" from the buffer
-size_t TestSocket::write(void* queue_buffer, size_t buffer_size)
+size_t TestSocket::write(void* queue_buffer, size_t buffer_size, asio::error_code& unused)
 {
 
     // TODO: copy stuff into our destination buffer from this given one
@@ -16,14 +16,16 @@ size_t TestSocket::write(void* queue_buffer, size_t buffer_size)
     return buffer_size; // in reality this may not be the case, asio may end up writing less
 }
 
-size_t TestSocket::read(void* queue_buffer, size_t buffer_size)
+size_t TestSocket::read(void* queue_buffer, size_t buffer_size, asio::error_code& ec)
 {
+    if(buffer_size == 0) return 0;
+
     // fill the queue's buffer from our source buffer
     void* a = (uint8_t*) source_buffer + buffer_size;
 
     if(a > source_buffer_end)
     {
-        stopping_function();
+        ec = asio::error::eof;
         return 0;
     }
 
@@ -37,14 +39,10 @@ size_t TestSocket::read(void* queue_buffer, size_t buffer_size)
 }
 
 
+// May be past the available amount in the buffer - handled by read's error code
 size_t TestSocket::available()
 {
     current_available = (rng_mult * current_available + rng_incr) & mod;
-    if((uint8_t*) source_buffer + current_available >= source_buffer_end)
-    {
-        stopping_function(); // tell the queue to stop working
-        return 0;
-    }
     return current_available;
 }
 
@@ -55,7 +53,7 @@ void TestSocket::WaitRead()
 
 void TestSocket::Close()
 {
-    
+
 }
 
 
@@ -70,12 +68,6 @@ void TestSocket::WaitWrite()
 //
 //      Getters And Setters
 //
-
-void TestSocket::SetStoppingFunction(std::function<void(void)> func)
-{
-    this->stopping_function = func;
-}
-
 void TestSocket::SetQueueSize(size_t s)
 {
     this->mod = s - 1;

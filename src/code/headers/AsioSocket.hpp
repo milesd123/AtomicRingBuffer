@@ -6,8 +6,8 @@
 class AsioSocket : public SimpleSocket{
 public:
     AsioSocket(asio::io_context&);
-    virtual inline size_t write(void*, size_t) override;
-    virtual inline size_t read(void*, size_t) override;
+    virtual inline size_t write(void*, size_t, asio::error_code&) override;
+    virtual inline size_t read(void*, size_t, asio::error_code&) override;
     virtual inline size_t available() override;
 
     virtual void WaitRead() override;
@@ -19,6 +19,4 @@ public:
 private:
     asio::ip::tcp::socket socket;
     asio::ip::tcp::endpoint receiving_endpoint;
-    asio::error_code ec_w;
-    asio::error_code ec_r;
 };

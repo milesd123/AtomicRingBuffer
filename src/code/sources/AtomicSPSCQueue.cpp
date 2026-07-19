@@ -76,6 +76,7 @@ void AtomicSPSCQueue::ReadFromBuffer()
     size_t read_index = 0;
     size_t read_amount = 0;
     size_t avail = 0;
+    asio::error_code ec;
 
     while (running_signal.load(std::memory_order_relaxed))
     {
@@ -89,11 +90,9 @@ void AtomicSPSCQueue::ReadFromBuffer()
 
         if(read_amount >= space_until_end) read_amount = space_until_end;
 
-        if(read_amount == 0) continue;
+        size_t done = dest_socket->write(buffer + read_index, read_amount, ec);
 
-        size_t done = dest_socket->write(buffer + read_index, read_amount);
-
-        if(done == 0) Stop();
+        if(ec == asio::error::eof) Stop();
 
         // std::cout <<"\t\t\t\t"<<name <<" |Consumer Size:" << read_amount << ". Written to sock: " << done << std::endl;
 
@@ -117,6 +116,7 @@ void AtomicSPSCQueue::WriteToBuffer()
     size_t writer_index = 0;
     size_t write_amount = 0;
     size_t written = 0;
+    asio::error_code ec;
 
     while (running_signal.load(std::memory_order_relaxed))
     {
@@ -130,11 +130,9 @@ void AtomicSPSCQueue::WriteToBuffer()
 
         if(write_amount >= space_until_end) write_amount = space_until_end;
 
-        if(write_amount == 0) continue; // TODO: Possibly remove me
+        written = source_socket->read(buffer + writer_index, write_amount, ec);
 
-        written = source_socket->read(buffer + writer_index, write_amount);
-
-        if(written == 0) Stop();
+        if(ec == asio::error::eof) Stop();
 
         // std::cout <<name<<" Producer write_amount:" << write_amount << ". Written to buf: " << done << std::endl;
 

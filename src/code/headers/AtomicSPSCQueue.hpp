@@ -9,7 +9,6 @@ public:
     AtomicSPSCQueue(SimpleSocket* to, SimpleSocket* from, size_t buf_size, uint8_t* buf, const char* name);
     void Start();
     void WaitForStop();
-    
 private:    
     void Stop();
     inline size_t FastModulo(size_t);
@@ -30,8 +29,6 @@ private:
     bool ready_to_join = false;
     std::mutex mutex_;
     std::condition_variable cond_var_;
-
-
 
     std::atomic_bool running_signal{false};
 

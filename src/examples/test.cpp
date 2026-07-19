@@ -38,9 +38,7 @@ void SocketTest(int n, Benchmark* b)
     sock.SetSource(source_buffer, source_buffer + test_buffer_size);
 
     // create our worker
-    AtomicSPSCQueue<uint8_t> queue(&sock, &sock, BUFFERSIZE, queue_buffer, "A");
-
-    sock.SetStoppingFunction([&](){queue.Stop();});
+    AtomicSPSCQueue queue(&sock, &sock, BUFFERSIZE, queue_buffer, "A");
 
 
     // Start timer
