@@ -10,7 +10,6 @@
 #include <iostream>
 #include <cstdint>
 #include <atomic>
-#include <iterator>
 #include <chrono>
 
 #include "../../external/asio-1.36.0/include/asio.hpp"

@@ -89,13 +89,11 @@ void AtomicSPSCQueue::ReadFromBuffer()
 
         if(read_amount >= space_until_end) read_amount = space_until_end;
 
-        if(read_amount == 0) continue;
-
         size_t done = dest_socket->write(buffer + read_index, read_amount);
 
         if(done == 0) Stop();
 
-        std::cout <<"\t\t\t\t"<<name <<" |Consumer Size:" << read_amount << ". Written to sock: " << done << std::endl;
+        // std::cout <<"\t\t\t\t"<<name <<" |Consumer Size:" << read_amount << ". Written to sock: " << done << std::endl;
 
         // Increment by the amount read returned by the reader (may differ from the amount_w)
         reader.store(
@@ -116,6 +114,7 @@ void AtomicSPSCQueue::WriteToBuffer()
     size_t space_until_end = 0;
     size_t writer_index = 0;
     size_t write_amount = 0;
+    size_t written = 0;
 
     while (running_signal.load(std::memory_order_relaxed))
     {
@@ -129,17 +128,15 @@ void AtomicSPSCQueue::WriteToBuffer()
 
         if(write_amount >= space_until_end) write_amount = space_until_end;
 
-        if(write_amount == 0) continue; // TODO: Possibly remove me
+        written = source_socket->read(buffer + writer_index, write_amount);
 
-        size_t done = source_socket->read(buffer + writer_index, write_amount);
+        if(written == 0) Stop();
 
-        if(done == 0) Stop();
-
-        std::cout <<name<<" Producer write_amount:" << write_amount << ". Written to buf: " << done << std::endl;
+        // std::cout <<name<<" Producer write_amount:" << write_amount << ". Written to buf: " << done << std::endl;
 
         // Increment by the amount read returned by the reader (may differ from the amount_w)
         writer.store(
-            writer_ + done,
+            writer_ + written,
             std::memory_order_release
         );
     }
