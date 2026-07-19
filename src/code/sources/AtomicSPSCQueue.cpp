@@ -15,27 +15,52 @@ AtomicSPSCQueue::AtomicSPSCQueue
 
 void AtomicSPSCQueue::Start()
 {
-    running.store(true, std::memory_order_release);
-    running_na = true;
+    // store signals
+    running_signal.store(true, std::memory_order_release);
+    running_ = true;
+
+    // start workers
     worker_from = std::thread(&AtomicSPSCQueue::ReadFromBuffer, this);
     worker_to = std::thread(&AtomicSPSCQueue::WriteToBuffer, this);
 }
 
+// Wait for a worker thread to signal for join
 void AtomicSPSCQueue::WaitForStop()
 {
-    if(!running_na) return;
-    running_na = false;
-    if(worker_from.joinable()) worker_from.join();
-    if(worker_to.joinable()) worker_to.join();
+    if(!running_) return;
+
+    // sleep-wait until signaled to join threads
+    std::unique_lock<std::mutex> lock(mutex_);
+    cond_var_.wait(lock, [this]{ return ready_to_join;});
+
+    // there is no way these threads arent joinable
+    while(!worker_from.joinable());
+    worker_from.join();
+    while(!worker_to.joinable());
+    worker_to.join();
+
+    // reset signals
+    running_signal.store(false);
+    running_ = false;
+    ready_to_join = false;
 }
 
+// manages finishing worker threads and closing sockets
 void AtomicSPSCQueue::Stop()
 {
-    if(!running_na) return;
-    running_na = false;
-    running.store(false);
-    if(worker_from.joinable()) worker_from.join();   // very bad if called FROM worker_from itself: tries to stop itself, deadlock, system_error
-    if(worker_to.joinable()) worker_to.join();
+    // allow threads to close on their own
+    running_signal.store(false);
+
+    // close sockets safely, cancelling any stalling read or writes
+    source_socket->Close();
+    dest_socket->Close();
+
+    // signal WaitForStop to join threads
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        ready_to_join = true;
+    }
+
     std::cout << name << " Stopped." << std::endl;
 }
 
@@ -52,7 +77,7 @@ void AtomicSPSCQueue::ReadFromBuffer()
     size_t read_amount = 0;
     size_t avail = 0;
 
-    while (running.load(std::memory_order_relaxed))
+    while (running_signal.load(std::memory_order_relaxed))
     {
         reader_ = reader.load(std::memory_order_relaxed);
         writer_ = writer.load(std::memory_order_acquire);
@@ -68,11 +93,8 @@ void AtomicSPSCQueue::ReadFromBuffer()
 
         size_t done = dest_socket->write(buffer + read_index, read_amount);
 
-        if(done == 0) {
-            source_socket->Close();
-            dest_socket->Close();
-            running.store(false);
-        }
+        if(done == 0) Stop();
+
         std::cout <<"\t\t\t\t"<<name <<" |Consumer Size:" << read_amount << ". Written to sock: " << done << std::endl;
 
         // Increment by the amount read returned by the reader (may differ from the amount_w)
@@ -95,7 +117,7 @@ void AtomicSPSCQueue::WriteToBuffer()
     size_t writer_index = 0;
     size_t write_amount = 0;
 
-    while (running.load(std::memory_order_relaxed))
+    while (running_signal.load(std::memory_order_relaxed))
     {
         writer_ = writer.load(std::memory_order_relaxed);
         writer_index = FastModulo(writer_);
@@ -111,11 +133,7 @@ void AtomicSPSCQueue::WriteToBuffer()
 
         size_t done = source_socket->read(buffer + writer_index, write_amount);
 
-        if(done == 0) {
-            source_socket->Close();
-            dest_socket->Close();
-            running.store(false);
-        }
+        if(done == 0) Stop();
 
         std::cout <<name<<" Producer write_amount:" << write_amount << ". Written to buf: " << done << std::endl;
 

@@ -9,27 +9,31 @@ public:
     AtomicSPSCQueue(SimpleSocket* to, SimpleSocket* from, size_t buf_size, uint8_t* buf, const char* name);
     void Start();
     void WaitForStop();
-    void Stop();
-
+    
 private:    
+    void Stop();
     inline size_t FastModulo(size_t);
     void ReadFromBuffer();
     void WriteToBuffer();
 
     std::thread worker_to;
     std::thread worker_from;
-    SimpleSocket* source_socket; // leaving non-const for the future
-    SimpleSocket* dest_socket;
+    SimpleSocket* const source_socket;
+    SimpleSocket* const dest_socket;
 
     const size_t buffer_size;
-
-    bool running_na = false;
-
     uint8_t* const buffer; 
+    
+    const char* name; // for realtime debugging purposes
+    
+    bool running_ = false; 
+    bool ready_to_join = false;
+    std::mutex mutex_;
+    std::condition_variable cond_var_;
 
-    const char* name;
 
-    std::atomic<bool> running{false};
+
+    std::atomic_bool running_signal{false};
 
     // Place all of the writer/reader and their variables in different cache lines
     alignas(64) std::atomic_size_t writer{0};
