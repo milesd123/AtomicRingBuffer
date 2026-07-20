@@ -8,6 +8,8 @@ public:
     AsioSocket(asio::io_context&);
     virtual inline size_t write(void*, size_t, asio::error_code&) override;
     virtual inline size_t read(void*, size_t, asio::error_code&) override;
+    virtual inline size_t write(void*, size_t) override;
+    virtual inline size_t read(void*, size_t) override;
     virtual inline size_t available() override;
 
     virtual void WaitRead() override;

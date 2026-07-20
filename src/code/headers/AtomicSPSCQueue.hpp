@@ -31,6 +31,9 @@ private:
     std::condition_variable cond_var_;
 
     std::atomic_bool running_signal{false};
+    std::atomic_bool stop_initiated{false};
+    std::condition_variable queue_empty_;
+    std::mutex m_;
 
     // Place all of the writer/reader and their variables in different cache lines
     alignas(64) std::atomic_size_t writer{0};

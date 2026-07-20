@@ -16,6 +16,19 @@ size_t TestSocket::write(void* queue_buffer, size_t buffer_size, asio::error_cod
     return buffer_size; // in reality this may not be the case, asio may end up writing less
 }
 
+size_t TestSocket::write(void* queue_buffer, size_t buffer_size)
+{
+
+    // TODO: copy stuff into our destination buffer from this given one
+    memcpy(dest_buffer, queue_buffer, buffer_size);
+
+    dest_buffer = (uint8_t*) dest_buffer + buffer_size;
+
+    write_operations++;
+
+    return buffer_size; // in reality this may not be the case, asio may end up writing less
+}
+
 size_t TestSocket::read(void* queue_buffer, size_t buffer_size, asio::error_code& ec)
 {
     if(buffer_size == 0) return 0;
@@ -38,6 +51,26 @@ size_t TestSocket::read(void* queue_buffer, size_t buffer_size, asio::error_code
     return buffer_size; // asio might return less
 }
 
+size_t TestSocket::read(void* queue_buffer, size_t buffer_size)
+{
+    if(buffer_size == 0) return 0;
+
+    // fill the queue's buffer from our source buffer
+    void* a = (uint8_t*) source_buffer + buffer_size;
+
+    if(a > source_buffer_end)
+    {
+        return 0;
+    }
+
+    memcpy(queue_buffer, source_buffer, buffer_size);
+
+    source_buffer = a;
+
+    read_operations++;
+    
+    return buffer_size; // asio might return less
+}
 
 // May be past the available amount in the buffer - handled by read's error code
 size_t TestSocket::available()

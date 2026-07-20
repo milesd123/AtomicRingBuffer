@@ -12,11 +12,21 @@ size_t AsioSocket::write(void* buffer, size_t amount, asio::error_code& ec)
     // TODO: add error code to the function arguments so the main thread only makes 1 check.
     return socket.write_some(asio::mutable_buffer(buffer, amount), ec);
 }
+size_t AsioSocket::write(void* buffer, size_t amount)
+{
+    // TODO: add error code to the function arguments so the main thread only makes 1 check.
+    return socket.write_some(asio::mutable_buffer(buffer, amount));
+}
 
 // read from the socket into a buffer
 size_t AsioSocket::read(void* buffer, size_t amount, asio::error_code& ec)
 {
     return socket.read_some(asio::mutable_buffer(buffer, amount), ec);
+}
+
+size_t AsioSocket::read(void* buffer, size_t amount)
+{
+    return socket.read_some(asio::mutable_buffer(buffer, amount));
 }
 
 // return the available bytes in the socket

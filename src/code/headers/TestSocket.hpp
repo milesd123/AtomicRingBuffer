@@ -7,6 +7,8 @@ public:
     TestSocket();
     virtual size_t write(void*, size_t, asio::error_code&) override;
     virtual size_t read(void*, size_t, asio::error_code&) override;
+    virtual size_t write(void*, size_t) override;
+    virtual size_t read(void*, size_t) override;
     virtual size_t available() override;
     virtual void WaitRead() override;
     virtual void WaitWrite() override;

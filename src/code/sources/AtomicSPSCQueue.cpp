@@ -2,7 +2,6 @@
 
 // Atomic Single Producer Single Consumer Queue 
 // 'to' and 'from' should be treated as 'to/from this object'
-
 AtomicSPSCQueue::AtomicSPSCQueue
 (
     SimpleSocket* to, SimpleSocket* from, size_t buf_size, uint8_t* buf, const char* name
@@ -31,7 +30,7 @@ void AtomicSPSCQueue::WaitForStop()
 
     // sleep-wait until signaled to join threads
     std::unique_lock<std::mutex> lock(mutex_);
-    cond_var_.wait(lock, [this]{ return ready_to_join;});
+    cond_var_.wait(lock, [this]{ return ready_to_join; });
 
     // there is no way these threads arent joinable
     while(!worker_from.joinable());
@@ -43,17 +42,13 @@ void AtomicSPSCQueue::WaitForStop()
     running_signal.store(false);
     running_ = false;
     ready_to_join = false;
+    stop_initiated.store(false);
 }
 
 // manages finishing worker threads and closing sockets
 void AtomicSPSCQueue::Stop()
 {
-    // allow threads to close on their own
     running_signal.store(false);
-
-    // close sockets safely, cancelling any stalling read or writes
-    source_socket->Close();
-    dest_socket->Close();
 
     // signal WaitForStop to join threads
     {
@@ -61,13 +56,14 @@ void AtomicSPSCQueue::Stop()
         ready_to_join = true;
     }
 
+    cond_var_.notify_all();
+
     std::cout << name << " Stopped." << std::endl;
 }
 
-
 void AtomicSPSCQueue::ReadFromBuffer()
 {
-    std::cout <<name<< " ReadFromBuffer Started: " << std::this_thread::get_id() <<std::endl;
+    // std::cout <<name<< " ReadFromBuffer Started: " << std::this_thread::get_id() <<std::endl;
     // assuming that nothing is added inbetween these variables(and 64-byte cache lines) 
     // they should be on the same cache page;
     alignas(64) size_t writer_ = 0;
@@ -76,39 +72,49 @@ void AtomicSPSCQueue::ReadFromBuffer()
     size_t read_index = 0;
     size_t read_amount = 0;
     size_t avail = 0;
+    size_t read = 0;
     asio::error_code ec;
 
     while (running_signal.load(std::memory_order_relaxed))
     {
+
+        // load position variables
         reader_ = reader.load(std::memory_order_relaxed);
         writer_ = writer.load(std::memory_order_acquire);
         read_index = FastModulo(reader_);
 
+        // compute possible amount to read
         read_amount = writer_ - reader_;
 
         space_until_end = buffer_size - read_index;
 
         if(read_amount >= space_until_end) read_amount = space_until_end;
 
-        size_t done = dest_socket->write(buffer + read_index, read_amount, ec);
+        if(read_amount == 0) continue;
 
-        if(ec == asio::error::eof) Stop();
+        // write to the buffer
+        read = dest_socket->write(buffer + read_index, read_amount, ec);
 
-        // std::cout <<"\t\t\t\t"<<name <<" |Consumer Size:" << read_amount << ". Written to sock: " << done << std::endl;
+        if(ec){
+            std::cout << name << " ReadFromBuffer Stopping " << ec.message() << std::endl;
+            source_socket->Close();
+            dest_socket->Close();
+            Stop();
+        } 
 
         // Increment by the amount read returned by the reader (may differ from the amount_w)
         reader.store(
-            reader_ + done,
+            reader_ + read,
             std::memory_order_release
         );
     }
-    std::cout << name << " ReadFromBuffer Stopped: " << std::this_thread::get_id() <<std::endl;
+    // std::cout << name << " ReadFromBuffer Stopped: " << std::this_thread::get_id() <<std::endl;
 }
 
 // Write to the buffer from the socket
 void AtomicSPSCQueue::WriteToBuffer()
 {
-    std::cout << name << " WriteToBuffer Started: " << std::this_thread::get_id() <<std::endl;
+    // std::cout << name << " WriteToBuffer Started: " << std::this_thread::get_id() <<std::endl;
 
     alignas(64) size_t writer_ = 0;
     size_t reader_ = 0;
@@ -130,11 +136,16 @@ void AtomicSPSCQueue::WriteToBuffer()
 
         if(write_amount >= space_until_end) write_amount = space_until_end;
 
+        if(write_amount == 0) continue;
+
         written = source_socket->read(buffer + writer_index, write_amount, ec);
 
-        if(ec == asio::error::eof) Stop();
-
-        // std::cout <<name<<" Producer write_amount:" << write_amount << ". Written to buf: " << done << std::endl;
+        if(ec) {
+            // std::cout << name << " WriteToBuffer Stopping " << ec.message() << std::endl;
+            source_socket->Close();
+            dest_socket->Close();
+            Stop();
+        }
 
         // Increment by the amount read returned by the reader (may differ from the amount_w)
         writer.store(
@@ -142,7 +153,8 @@ void AtomicSPSCQueue::WriteToBuffer()
             std::memory_order_release
         );
     }
-    std::cout << name << " WriteToBuffer Stopped: " << std::this_thread::get_id() <<std::endl;
+
+    // std::cout << name << " WriteToBuffer Stopped: " << std::this_thread::get_id() <<std::endl;
 
 }
 

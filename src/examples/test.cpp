@@ -1,20 +1,77 @@
 #include "../code/headers/headers.hpp"
 
-#define BUFFERSIZE 1024
+size_t BUFFERSIZE = 1024;
 
 struct Benchmark{
     size_t reads = 0;
     size_t writes = 0;
     size_t buffer_size = 0;
-    size_t socket_item_count_mbs = 0;
     std::chrono::duration<double> seconds;
 };
 
 
 void SocketTest(int n, Benchmark* b);
 
-int main()
+int main(int c, char* argv[])
 {
+
+    if(c != 2)
+    {
+        std::cout << "usage: ./program <mb_test_amount>" << std::endl;
+        return 0;
+    }
+
+
+
+
+    // BENCHMARK: 1024
+    Benchmark benchmark{0, 0, BUFFERSIZE, std::chrono::duration<double>{}};
+
+    int amt = atoi(argv[1]);
+    for(int i = 0; i < amt; i++)
+    {
+        // 1 GB * 256
+        SocketTest(1048576, &benchmark);
+    }
+
+    std::cout << "Atomic Queue Size: " << BUFFERSIZE << std::endl;
+    std::cout << "Transferred "<< amt <<" Mb in " <<  benchmark.seconds.count() <<"("<<amt/benchmark.seconds.count() <<"Mbps)"<< std::endl;
+    std::cout << benchmark.reads / benchmark.seconds.count() << " Reads/Second" << std::endl;
+    std::cout << benchmark.writes / benchmark.seconds.count() << " Writes/Second" << std::endl;
+
+
+
+
+    // BENCHMARK: 2048
+    BUFFERSIZE = 2048;
+    benchmark = {0, 0, BUFFERSIZE, std::chrono::duration<double>{}};
+
+    for(int i = 0; i < amt; i++)
+    {
+        SocketTest(1048576, &benchmark);
+    }
+
+    std::cout << "Atomic Queue Size: " << BUFFERSIZE << std::endl;
+    std::cout << "Transferred "<< amt <<" Mb in " <<  benchmark.seconds.count() <<"("<<amt/benchmark.seconds.count() <<"Mbps)"<< std::endl;
+    std::cout << benchmark.reads / benchmark.seconds.count() << " Reads/Second" << std::endl;
+    std::cout << benchmark.writes / benchmark.seconds.count() << " Writes/Second" << std::endl;
+
+
+
+
+    // BENCHMARK: 4096
+    BUFFERSIZE = 4096;
+    benchmark = {0, 0, BUFFERSIZE, std::chrono::duration<double>{}};
+
+    for(int i = 0; i < amt; i++)
+    {
+        SocketTest(1048576, &benchmark);
+    }
+
+    std::cout << "Atomic Queue Size: " << BUFFERSIZE << std::endl;
+    std::cout << "Transferred "<< amt <<" Mb in " <<  benchmark.seconds.count() <<"("<<amt/benchmark.seconds.count() <<"Mbps)"<< std::endl;
+    std::cout << benchmark.reads / benchmark.seconds.count() << " Reads/Second" << std::endl;
+    std::cout << benchmark.writes / benchmark.seconds.count() << " Writes/Second" << std::endl;
 
     return 0;
 }
@@ -23,10 +80,10 @@ int main()
 void SocketTest(int n, Benchmark* b)
 {
     // create test buffers and queue buffer
-    const size_t test_buffer_size = n * 1048576 ; // n MBs
+    const size_t test_buffer_size = n; // n MBs
     alignas(64) uint8_t* source_buffer = new uint8_t[test_buffer_size];
     alignas(64) uint8_t* dest_buffer = new uint8_t[test_buffer_size];
-    alignas(64) uint8_t queue_buffer[BUFFERSIZE];
+    alignas(64) uint8_t* queue_buffer = new uint8_t[BUFFERSIZE];
     
     // fill the source buffer with random values
 

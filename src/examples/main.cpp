@@ -18,21 +18,6 @@ int main(int argc, char* argv[]){
     {
         std::cout << error.what() << std::endl;
     }
-    // SocketTest(atoi(argv[1]));
-
-    // Benchmark benchmark{0, 0, BUFFERSIZE, 1000, std::chrono::duration<double>{}};
-
-    // for(size_t i = 0; i < 1000; i++)
-    // {
-    //     // 1 GB * 256
-    //     SocketTest(1, &benchmark);
-    // }
-
-    // std::cout << "Atomic Queue Size: " << BUFFERSIZE << std::endl;
-    // std::cout << "Transferred 1 GB in " <<  benchmark.seconds.count() << std::endl;
-    // std::cout << benchmark.reads / benchmark.seconds.count() << " Reads/Second" << std::endl;
-    // std::cout << benchmark.writes / benchmark.seconds.count() << " Writes/Second" << std::endl;
-
     return 0;
 }
 
